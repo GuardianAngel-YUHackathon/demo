@@ -1,5 +1,11 @@
 
 Template from HTML5UP customized to our group's needs below is the readme from original
+
+This is a project for the Yeshiva University Hackathon 
+
+
+
+
 ==================
 Identity by HTML5 UP
 html5up.net | @ajlkn
