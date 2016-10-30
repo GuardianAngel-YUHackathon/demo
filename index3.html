@@ -4,7 +4,235 @@
 	html5up.net | @ajlkn
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 -->
+<html><!DOCTYPE html>
 <html>
+  <head>
+    <title>Distance Matrix service</title>
+    <style>
+      #right-panel {
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+
+      #right-panel select, #right-panel input {
+        font-size: 15px;
+      }
+
+      #right-panel select {
+        width: 100%;
+      }
+
+      #right-panel i {
+        font-size: 12px;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+        width: 50%;
+      }
+      #right-panel {
+        float: right;
+        width: 50%;
+        padding-left: 2%;
+      }
+      #output {
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+ 
+
+    <div id="right-panel">
+      <div id="inputs">
+        <pre>
+
+          <div id="clockdiv">
+              Days: <span class="days"></span><br>
+              Hours: <span class="hours"></span><br>
+              Minutes: <span class="minutes"></span><br>
+              Seconds: <span class="seconds"></span>
+          </div>
+        </pre>
+      </div>
+      <div>
+        <strong>Results</strong>
+      </div>
+      <div id="output"></div>
+    </div>
+    <div id="map"></div>
+
+
+
+
+    <script>
+
+      function initMap() {
+        getCurrentLocation(function (loc) {
+        if (loc != null) {
+        //  console.log(loc);
+          var origin1 = loc;
+          var currentTime = Date.now();
+            //document.getElementById('startInner').value = loc.toString();
+            //document.getElementById('start').innerHTML = 'Current location';
+            //map.setCenter(loc);
+
+        var bounds = new google.maps.LatLngBounds;
+        var markersArray = [];
+
+    //    var origin1 = {lat: 55.93, lng: -3.118};
+    //    var origin2 = 'Greenwich, England';
+        var destinationA = '350 5th Ave, New Yourk, NY 10118';
+        //var destinationB = {lat: 50.087, lng: 14.421};
+
+        var destinationIcon = 'https://chart.googleapis.com/chart?' +
+            'chst=d_map_pin_letter&chld=D|FF0000|000000';
+        var originIcon = 'https://chart.googleapis.com/chart?' +
+            'chst=d_map_pin_letter&chld=O|FFFF00|000000';
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 55.53, lng: 9.4},
+          zoom: 10
+        });
+        var geocoder = new google.maps.Geocoder;
+
+        var service = new google.maps.DistanceMatrixService;
+        service.getDistanceMatrix({
+          origins: [origin1],
+          destinations: [destinationA],
+          travelMode: 'WALKING',
+          unitSystem: google.maps.UnitSystem.METRIC,
+          avoidHighways: false,
+          avoidTolls: false
+        }, function(response, status) {
+        //  console.log("GO");
+          console.log(response);
+          if (status !== 'OK') {
+            alert('Error was: ' + status);
+          } else {
+            var originList = response.originAddresses;
+            var destinationList = response.destinationAddresses;
+            var outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = '';
+            deleteMarkers(markersArray);
+
+            var showGeocodedAddressOnMap = function(asDestination) {
+              var icon = asDestination ? destinationIcon : originIcon;
+              return function(results, status) {
+                if (status === 'OK') {
+                  map.fitBounds(bounds.extend(results[0].geometry.location));
+                  markersArray.push(new google.maps.Marker({
+                    map: map,
+                    position: results[0].geometry.location,
+                    icon: icon
+                  }));
+                } else {
+                  alert('Geocode was not successful due to: ' + status);
+                }
+              };
+            };
+
+            for (var i = 0; i < originList.length; i++) {
+              var results = response.rows[i].elements;
+              geocoder.geocode({'address': originList[i]},
+                  showGeocodedAddressOnMap(false));
+              for (var j = 0; j < results.length; j++) {
+                geocoder.geocode({'address': destinationList[j]},
+                    showGeocodedAddressOnMap(true));
+                outputDiv.innerHTML += originList[i] + ' to ' + destinationList[j] +
+                    ': ' + results[j].distance.text + ' in ' +
+                    results[j].duration.text + '<br>';
+
+                //    var timetodest = (results[j].duration.text);
+
+//var currentTime = Date.parse(new Date());
+var endTimeSeconds = currentTime + (results[j].duration.value*1000);
+var endTimeStart = new Date(endTimeSeconds);
+//console.log(currentTime);
+                    initializeClock('clockdiv', endTimeStart);
+
+
+
+              }
+            }
+          }
+        });
+      }
+
+    else {
+        document.getElementById('start').innerHTML = 'Current location not found';
+        document.getElementById('btnCalc').disabled = true;
+    }
+});
+}
+      function deleteMarkers(markersArray) {
+        for (var i = 0; i < markersArray.length; i++) {
+          markersArray[i].setMap(null);
+        }
+        markersArray = [];
+      }
+      function getCurrentLocation(complete) {
+    // Try W3C Geolocation (Preferred)
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            var location = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+            complete(location);
+        }, function () {
+            complete(null);
+        });
+    }
+    else {
+        complete(null);
+    }
+}
+function getTimeRemaining(endtime){
+  var t = Date.parse(endtime) - Date.parse(new Date());
+  var seconds = Math.floor( (t/1000) % 60 );
+  var minutes = Math.floor( (t/1000/60) % 60 );
+  var hours = Math.floor( (t/(1000*60*60)) % 24 );
+  var days = Math.floor( t/(1000*60*60*24) );
+  return {
+    'total': t,
+    'days': days,
+    'hours': hours,
+    'minutes': minutes,
+    'seconds': seconds
+  };
+}
+
+function initializeClock(id, endtime){
+  var clock = document.getElementById(id);
+
+
+
+
+function updateClock(){
+  var t = getTimeRemaining(endtime);
+  console.log(t);
+  clock.innerHTML = 'days: ' + t.days + '<br>' +
+                    'hours: '+ t.hours + '<br>' +
+                    'minutes: ' + t.minutes + '<br>' +
+                    'seconds: ' + t.seconds;
+  if(t.total<=0){
+    clearInterval(timeinterval);
+  }
+}
+
+updateClock(); // run function once at first to avoid delay
+var timeinterval = setInterval(updateClock,1000);
+
+}
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA-wX_QJ3bWcA5a-9r8LuxjXmFCduqcJyk&callback=initMap">
+    </script>
+  </body>
+</html>
+
 	<head>
 		<title>Identity by HTML5 UP</title>
 		<meta charset="utf-8" />
@@ -17,116 +245,6 @@
 	</head>
 	<body class="is-loading">
 
-		<!-- Wrapper -->
-			<div id="wrapper">
-
-				<!-- Main -->
-					<section id="main">
-						<header>
-							<!--<span class="avatar"><img src="images/avatar.jpg" alt="" /></span>-->
-							<span class="avatar"><img src="images/halo_penguin_sm.png" alt="" /></span>
-							<h1>Guardian Angel</h1>
-							<p>The Answer For Your Worried Mother</p>
-							*******
-<h1>Countdown Clock</h1>
-<div id="clockdiv">
-  <!--<div>
-    <span class="days"></span>
-    <div class="smalltext">Days</div>
-  </div>
-  <div>
-    <span class="hours"></span>
-    <div class="smalltext">Hours</div>
-  </div>-->
-  <div>
-    <span class="minutes"></span>
-    <div class="smalltext">Minutes</div>
-  </div>
-  <div>
-    <span class="seconds"></span>
-    <div class="smalltext">Seconds</div>
-  </div>
-</div>			
-
-
-<form class="form-horizontal">
-<fieldset>
-
-<!-- Form Name -->
-<legend></legend>
-
-<!-- Button -->
-<div class="form-group">
-  <label class="col-md-4 control-label" for="arrived"></label>
-  <div class="col-md-4">
-  <br/>
-  	<a href="index2.html">
-    	<button id="arrived" name="arrived" class="btn btn-primary">Arrived!</button>
-    </a>
-  </div>
-</div>
-
-</fieldset>
-</form>
-
-
-
-						</header>
-						<!--
-						<hr />
-						<h2>Extra Stuff!</h2>
-						<form method="post" action="#">
-							<div class="field">
-								<input type="text" name="name" id="name" placeholder="Name" />
-							</div>
-							<div class="field">
-								<input type="email" name="email" id="email" placeholder="Email" />
-							</div>
-							<div class="field">
-								<div class="select-wrapper">
-									<select name="department" id="department">
-										<option value="">Department</option>
-										<option value="sales">Sales</option>
-										<option value="tech">Tech Support</option>
-										<option value="null">/dev/null</option>
-									</select>
-								</div>
-							</div>
-							<div class="field">
-								<textarea name="message" id="message" placeholder="Message" rows="4"></textarea>
-							</div>
-							<div class="field">
-								<input type="checkbox" id="human" name="human" /><label for="human">I'm a human</label>
-							</div>
-							<div class="field">
-								<label>But are you a robot?</label>
-								<input type="radio" id="robot_yes" name="robot" /><label for="robot_yes">Yes</label>
-								<input type="radio" id="robot_no" name="robot" /><label for="robot_no">No</label>
-							</div>
-							<ul class="actions">
-								<li><a href="#" class="button">Get Started</a></li>
-							</ul>
-						</form>
-						<hr />
-						-->
-						<!--<footer>
-							<ul class="icons">
-								<li><a href="#" class="fa-twitter">Twitter</a></li>
-								<li><a href="#" class="fa-instagram">Instagram</a></li>
-								<li><a href="#" class="fa-facebook">Facebook</a></li>
-							</ul>
-						</footer>-->
-					</section>
-
-				<!-- Footer -->
-					<footer id="footer">
-						<ul class="copyright">
-							<li>&copy; Jane Doe</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-						</ul>
-					</footer>
-
-			</div>
-
 		<!-- Scripts -->
 			<!--[if lte IE 8]><script src="assets/js/respond.min.js"></script><![endif]-->
 			<script>
@@ -134,53 +252,6 @@
 					window.addEventListener('load', function() { document.body.className = document.body.className.replace(/\bis-loading\b/, ''); });
 					document.body.className += (navigator.userAgent.match(/(MSIE|rv:11\.0)/) ? ' is-ie' : '');
 				}
-
-
-				function getTimeRemaining(endtime) {
-  var t = Date.parse(endtime) - Date.parse(new Date());
-  var seconds = Math.floor((t / 1000) % 60);
-  var minutes = Math.floor((t / 1000 / 60) % 60);
-  //var hours = Math.floor((t / (1000 * 60 * 60)) % 24);
-  //var days = Math.floor(t / (1000 * 60 * 60 * 24));-->
-  return {
-    'total': t,
-    //'days': days,
-    //'hours': hours,
-    'minutes': minutes,
-    'seconds': seconds
-  };
-}
-
-function initializeClock(id, endtime) {
-  var clock = document.getElementById(id);
-  //var daysSpan = clock.querySelector('.days');
-  //var hoursSpan = clock.querySelector('.hours');
-  var minutesSpan = clock.querySelector('.minutes');
-  var secondsSpan = clock.querySelector('.seconds');
-
-  function updateClock() {
-    var t = getTimeRemaining(endtime);
-
-    //daysSpan.innerHTML = t.days;
-    //hoursSpan.innerHTML = ('0' + t.hours).slice(-2);
-    minutesSpan.innerHTML = ('0' + t.minutes).slice(-2);
-    secondsSpan.innerHTML = ('0' + t.seconds).slice(-2);
-
-    if (t.total <= 0) {
-      clearInterval(timeinterval);
-    }
-  }
-
-  updateClock();
-  var timeinterval = setInterval(updateClock, 1000);
-}
-
-//var deadline = new Date(Date.parse(new Date()) + 15 * 24 * 60 * 60 * 1000);
-var timeInMinutes = 10;
-var currentTime = Date.parse(new Date());
-var deadline = new Date(currentTime + timeInMinutes*60*1000);
-
-initializeClock('clockdiv', deadline);
 
 			</script>
 
